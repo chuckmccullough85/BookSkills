@@ -1,38 +1,16 @@
-# Audio transcription with Whisper (load on demand)
+# Multichannel MP3 transcription
 
-Load this reference only when `input_format=mp3`.
+Use this only when each audio channel contains a separate speaker. A stereo recording with mixed speakers does not meet that assumption.
 
-## Assumptions
+Requires `ffmpeg`, `ffprobe`, the Whisper CLI, and Python 3 on PATH. Transcription can contain errors, so review names, dates, and commitments against the recording when accuracy matters.
 
-- Input MP3 is multichannel.
-- One channel represents one speaker.
-- `ffmpeg`, `ffprobe`, and `whisper` CLI are installed and on PATH.
+Run from the skill directory:
 
-## Steps
-
-1. Detect channel count from the audio stream.
-2. Split each channel to mono WAV:
-   - `channel_1.wav`, `channel_2.wav`, and so on.
-3. Transcribe each WAV with Whisper to SRT.
-4. Parse each SRT and attach speaker label:
-   - `channel_1` -> `Speaker 1` unless mapped by `speaker_map`.
-5. Merge all lines by timestamp ascending into one transcript.
-6. Pass merged transcript as `meeting_text` into the summarization flow.
-
-## Suggested command shape
-
-```text
-whisper <wav_file> --model small --language en --output_format srt --temperature 0
+```bash
+python scripts/build_input_from_multichannel_mp3.py meeting.mp3 --speaker-map channel_1=Alex --speaker-map channel_2=Riley --output meeting_input.json
 ```
 
-## Failure handling
+The script detects channels, transcribes each separately, and writes JSON. Read its `meeting_text` field for the summary. Omit `--speaker-map` when names are unknown; the transcript will use `Speaker 1`, `Speaker 2`, and so on. The default Whisper model is `small` and the default language is English; use `--model` or `--language` when needed.
 
-- If no channels are detected, fail with explicit error.
-- If Whisper fails for any channel, stop and report that channel.
-- If timestamps are malformed, skip malformed block and continue, then report skipped count.
-
-## Notes
-
-- Audio processing is heavier than text flow, so keep it out of the default skill path.
-- Use `speaker_map` when known names are available to improve summary quality.
+If a required command fails or the transcript is empty, report the problem and ask for notes or a transcript rather than inventing a recap.
 

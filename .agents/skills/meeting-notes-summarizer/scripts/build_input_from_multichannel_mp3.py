@@ -161,6 +161,8 @@ def main() -> int:
     speaker_map = parse_speaker_map(args.speaker_map)
 
     channel_count = get_channel_count(mp3_path)
+    if channel_count < 2:
+        parser.error("Expected an MP3 with at least two separate speaker channels.")
     wav_files = split_channels(mp3_path, workdir, channel_count)
 
     all_entries: list[tuple[int, str, str]] = []
@@ -170,6 +172,8 @@ def main() -> int:
         all_entries.extend(parse_srt_entries(srt_file, speaker_name))
 
     all_entries.sort(key=lambda item: item[0])
+    if not all_entries:
+        parser.error("Whisper produced no readable transcript entries.")
     merged_transcript = "\n".join(
         f"[{speaker}] {content}" for _, speaker, content in all_entries
     )
